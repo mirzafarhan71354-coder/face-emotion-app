@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Facial Emotion Detector</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>Facial Emotion Detection</h1>
+
+  <video id="video" width="400" height="300" autoplay></video>
+  <button id="capture">Capture Emotion</button>
+  <p id="result">Emotion: --</p>
+
+  <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('capture');
+    const result = document.getElementById('result');
+    const context = canvas.getContext('2d');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => console.error("Webcam error:", err));
+
+    captureBtn.onclick = () => {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const image = canvas.toDataURL('image/jpeg');
+      
+      fetch('/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: image })
+      })
+      .then(res => res.json())
+      .then(data => {
+        result.textContent = `Emotion: ${data.emotion}`;
+      })
+      .catch(err => console.error(err));
+    };
+  </script>
+</body>
+</html>
