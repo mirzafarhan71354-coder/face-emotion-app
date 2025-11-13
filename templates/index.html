@@ -1,46 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Facial Emotion Detector</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Emotion Detector</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #video { border: 1px solid black; }
+        #canvas { display: none; }
+        #result { margin-top: 20px; font-size: 1.5em; font-weight: bold; }
+        button { margin: 10px; padding: 10px 20px; font-size: 1em; }
+    </style>
 </head>
 <body>
-  <h1>Facial Emotion Detection</h1>
+    <h1>Face Emotion Detector</h1>
 
-  <video id="video" width="400" height="300" autoplay></video>
-  <button id="capture">Capture Emotion</button>
-  <p id="result">Emotion: --</p>
+    <!-- Upload Image -->
+    <input type="file" id="imageInput" accept="image/*">
+    <button onclick="uploadImage()">Analyze Emotion</button>
+    
+    <hr>
 
-  <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+    <!-- Webcam -->
+    <video id="video" width="320" height="240" autoplay></video><br>
+    <button onclick="capture()">Capture & Analyze</button>
+    <canvas id="canvas" width="320" height="240"></canvas>
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const captureBtn = document.getElementById('capture');
-    const result = document.getElementById('result');
-    const context = canvas.getContext('2d');
+    <div id="result"></div>
 
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => { video.srcObject = stream; })
-      .catch(err => console.error("Webcam error:", err));
+    <script>
+        // Webcam setup
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
 
-    captureBtn.onclick = () => {
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const image = canvas.toDataURL('image/jpeg');
-      
-      fetch('/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: image })
-      })
-      .then(res => res.json())
-      .then(data => {
-        result.textContent = `Emotion: ${data.emotion}`;
-      })
-      .catch(err => console.error(err));
-    };
-  </script>
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => video.srcObject = stream)
+            .catch(err => console.error('Error accessing webcam:', err));
+
+        function capture() {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg');
+            analyzeEmotion(dataURL);
+        }
+
+        function uploadImage() {
+            const file = document.getElementById('imageInput').files[0];
+            if (!file) return alert("Please select an image!");
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                analyzeEmotion(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function analyzeEmotion(imageData) {
+            fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('result').textContent = "Error: " + data.error;
+                } else {
+                    document.getElementById('result').textContent = "Detected Emotion: " + data.emotion;
+                }
+            })
+            .catch(err => console.error(err));
+        }
+    </script>
 </body>
 </html>
+
